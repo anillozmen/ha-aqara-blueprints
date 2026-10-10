@@ -1,0 +1,54 @@
+blueprint:
+  name: Hareketle ışık
+  description: >-
+    Hareket sensörü hareket algıladığında ışığı açar, hareket bittikten
+    belirlenen süre sonra kapatır. Aqara hareket sensörleriyle test edilmek
+    üzere hazırlandı ama her `motion`/`occupancy` binary_sensor ile çalışır.
+  domain: automation
+  source_url: https://github.com/anillozmen/ha-aqara-blueprints/blob/main/blueprints/automation/motion_light.yaml
+  input:
+    motion_sensor:
+      name: Hareket sensörü
+      selector:
+        entity:
+          filter:
+            - domain: binary_sensor
+              device_class:
+                - motion
+                - occupancy
+    target_light:
+      name: Işık
+      selector:
+        target:
+          entity:
+            - domain: light
+    no_motion_wait:
+      name: Kapanma gecikmesi
+      description: Hareket bittikten sonra ışığın kapanması için beklenecek süre.
+      default: 120
+      selector:
+        number:
+          min: 0
+          max: 3600
+          unit_of_measurement: saniye
+
+mode: restart
+max_exceeded: silent
+
+triggers:
+  - trigger: state
+    entity_id: !input motion_sensor
+    from: "off"
+    to: "on"
+
+actions:
+  - action: light.turn_on
+    target: !input target_light
+  - wait_for_trigger:
+      - trigger: state
+        entity_id: !input motion_sensor
+        from: "on"
+        to: "off"
+  - delay: !input no_motion_wait
+  - action: light.turn_off
+    target: !input target_light
